@@ -8,6 +8,7 @@
 *.so
 *.dylib
 *.dll
+!redist/*
 
 # Compiled Static libraries
 *.lai
