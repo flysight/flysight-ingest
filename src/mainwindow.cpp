@@ -9,6 +9,8 @@
 #include <QMessageBox>
 #include <QProcess>
 #include <QSettings>
+#include <QSharedMemory>
+#include <QSystemSemaphore>
 #include <QTextStream>
 #include <QThread>
 #include <QTimer>
@@ -186,17 +188,6 @@ void MainWindow::exportItem(
     // Return immediately if busy
     if (exportBusy) return;
 
-    QSettings settings("HKEY_LOCAL_MACHINE\\SOFTWARE\\Paralog",
-                       QSettings::NativeFormat);
-
-    // Get Paralog install location
-    QString path = settings.value("Location", "").toString();
-    if (path.isEmpty())
-    {
-        QMessageBox::warning(this, "", "Couldn't find Paralog.");
-        return;
-    }
-
     // Disable export buttons
     exportBusy = true;
     enableExportButtons();
@@ -218,10 +209,26 @@ void MainWindow::exportItem(
     // Move file to exported folder
     QFile::rename(stagedFile, exportedFile);
 
-    // Export to Paralog
-    QProcess *process = new QProcess;
-    process->start(path + "\\Paralog.exe",
-                   QStringList("-logger=FlySight:" + exportedFile + ",Append All,Submit"));
+    // Inter-process communications
+    QSharedMemory shared("FlySight_Viewer_Import_Shared");
+    QSystemSemaphore free("FlySight_Viewer_Import_Free", 1, QSystemSemaphore::Open);
+    QSystemSemaphore used("FlySight_Viewer_Import_Used", 0, QSystemSemaphore::Open);
+
+    shared.create(1000);
+    shared.attach();
+
+    // Export to FlySight Viewer
+    free.acquire();
+
+    shared.lock();
+    QChar *buf = (QChar *) shared.data();
+    QByteArray bytes = exportedFile.toUtf8();
+    memcpy(buf, bytes, bytes.size());
+    shared.unlock();
+
+    used.release();
+
+    shared.detach();
 }
 
 void MainWindow::reexportItem(
@@ -229,17 +236,6 @@ void MainWindow::reexportItem(
 {
     // Return immediately if busy
     if (exportBusy) return;
-
-    QSettings settings("HKEY_LOCAL_MACHINE\\SOFTWARE\\Paralog",
-                       QSettings::NativeFormat);
-
-    // Get Paralog install location
-    QString path = settings.value("Location", "").toString();
-    if (path.isEmpty())
-    {
-        QMessageBox::warning(this, "", "Couldn't find Paralog.");
-        return;
-    }
 
     // Disable export buttons
     exportBusy = true;
@@ -252,10 +248,26 @@ void MainWindow::reexportItem(
     // Filename in "exported" sub-tree
     QString exportedFile = exportedDir.absoluteFilePath(item->text());
 
-    // Export to Paralog
-    QProcess *process = new QProcess;
-    process->start(path + "\\Paralog.exe",
-                   QStringList("-logger=FlySight:" + exportedFile + ",Append All,Submit"));
+    // Inter-process communications
+    QSharedMemory shared("FlySight_Viewer_Import_Shared");
+    QSystemSemaphore free("FlySight_Viewer_Import_Free", 1, QSystemSemaphore::Open);
+    QSystemSemaphore used("FlySight_Viewer_Import_Used", 0, QSystemSemaphore::Open);
+
+    shared.create(1000);
+    shared.attach();
+
+    // Export to FlySight Viewer
+    free.acquire();
+
+    shared.lock();
+    QChar *buf = (QChar *) shared.data();
+    QByteArray bytes = exportedFile.toUtf8();
+    memcpy(buf, bytes, bytes.size());
+    shared.unlock();
+
+    used.release();
+
+    shared.detach();
 }
 
 bool MainWindow::nativeEvent(
