@@ -374,13 +374,13 @@ bool MainWindow::writeConfigId(
 
     QTextStream out(&file);
 
+    out << "; Competition settings" << endl;
+    out << "Id:        " << id << endl;
+    out << endl;
     out << "; GPS settings" << endl;
     out << endl;
     out << "Model:     7    ; Airborne with < 2 G acceleration" << endl;
     out << "Rate:      200  ; Measurement rate (ms)" << endl;
-    out << endl;
-    out << "; Competition settings" << endl;
-    out << "Id:        " << id << endl;
 
     return true;
 }
@@ -399,7 +399,7 @@ void MainWindow::handleDeviceInsert(
 {
     QString rootPath = QString("%1:\\")
             .arg(QString("ABCDEFGHIJKLMNOPQRSTUVWXYZ").at(driveNum));
-    QString configPath(rootPath + QString("CONFIG.TXT"));
+    QString configPath(rootPath + QString("ID.TXT"));
 
     QString id = readConfigId(configPath);
 
@@ -429,7 +429,7 @@ void MainWindow::handleDeviceInsert(
             for (i = 0; i < 1000; ++i)
             {
                 QString newPath(rootPath +
-                                QString("CONFIG_") +
+                                QString("ID_") +
                                 QString("%1").arg(i, 3, 10, QChar('0')) +
                                 QString(".TXT"));
                 if (!QFile::exists(newPath))
